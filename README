@@ -1,0 +1,169 @@
+// Mihut Maria-Emilia, 311CA
+
+Descriere
+
+Proiectul implementeaza o aplicatie pentru manipularea imaginilor care permite
+incarcarea imaginilor, selectarea zonelor, aplicarea transformarilor
+(rotiri, crop, filtre), precum si salvarea fisierelor rezultate. Codul este
+structurat modular, fiecare operatie fiind gestionata de o functie specifica.
+
+Proiectul foloseste doua structuri importante:
+
+pixel: Stocheaza informatii despre fiecare pixel al imaginii. In cazul
+imaginilor color, pixelul contine componentele RGB (r, g, b), iar pentru
+imagini grayscale, contine doar luminozitatea (l).
+
+image: Reprezinta intreaga imagine, incluzand matricea de pixeli (pixels),
+dimensiunile (width, height), valoarea maxima a unui pixel (max_val),
+formatul imaginii (format) si coordonatele zonei selectate (x1, y1, x2, y2).
+
+Metoda de Rezolvare
+
+1. Incarcarea Imaginilor (LOAD)
+
+Descriere: Functia load_img incarca imaginile in formate ASCII (P2, P3) sau binare
+(P5, P6).
+Datele fisierului sunt citite secvential: format, dimensiuni, valoare maxima, matricea
+de pixeli.
+Imaginile grayscale sunt stocate in campul l al structurii pixel, iar imaginile
+color in campurile r, g, b.
+
+Dificultati: Gestionarea diferentelor dintre formatele ASCII si binare.
+Solutie: Diferentierea fisierelor pe baza antetului (format) si utilizarea metodelor
+specifice de citire.
+
+2. Selectarea Zonelor (SELECT)
+
+Descriere: Functia select_area permite selectarea unei subzone definite de coordonatele
+(x1, y1, x2, y2).
+Coordonatele sunt validate pentru a verifica daca sunt in limitele imaginii.
+Ordinea coordonatelor este corectata automat daca sunt introduse invers.
+Functia select_all selecteaza intreaga imagine prin setarea coordonatelor la
+dimensiunile acesteia.
+
+3. Crop (CROP)
+
+Descriere: Functia crop elimina pixelii din afara zonei selectate.
+Se creeaza o matrice noua (new_pixels) pentru zona selectata.
+Matricea veche este eliberata pentru a preveni scurgerile de memorie.
+Coordonatele zonei sunt actualizate pentru a reflecta intreaga imagine.
+
+4. Rotirea Imaginilor (ROTATE)
+
+Descriere: Functia rotate implementeaza rotirea imaginii sau zonei selectate in
+unghiuri de 90, 180 sau 270 de grade.
+
+Unghiurile negative sunt transformate in pozitive prin adaugarea de 360.
+Unghiurile mai mari de 360 sunt reduse la intervalul [0, 360] folosind
+angle %= 360.
+
+Verificarea zonei: Zona selectata trebuie sa fie patratica; altfel, rotirea nu
+este permisa.
+
+Transformari:
+
+- angle = 0 imaginea ramane identica
+- angle = 90 : Pixelul din linia i, coloana j este luat din [new_w - j - 1][i]
+- angle = 180 : Pixelul din linia i, coloana j este luat din
+[new_h - i - 1][new_w - j - 1]
+- angle = 270 : Pixelul din linia i, coloana j este luat din [j][new_h - i - 1]
+
+Procesul este impartit in doua functii:
+
+rotate_full: Roteste intreaga imagine.
+rotate_select: Roteste doar zona selectata.
+
+5. Aplicarea Filtrelor (APPLY)
+
+Descriere: Functia apply aplica filtre predefinite (EDGE, SHARPEN, BLUR,
+GAUSSIAN_BLUR).
+
+Kernelul si divizorul sunt generate in functie de tipul filtrului folosind
+functia ker_and_div care proceseaza matricea kernel de care avem nevoie si
+divizorul, adica parametrul din fata matricei din enunt. Pixelii de pe margine
+sunt exclusi pentru a preveni accesarea memoriei invalide.
+Valorile calculate sunt normalizate prin divizor si limitate la intervalul [0, 255]
+folosind clamp.
+
+6. Histograma (HISTOGRAM)
+
+Descriere: Functia histogram calculeaza distributia intensitatilor pixelilor
+pentru imagini grayscale si o afiseaza grafic sub forma de bare stelate.
+
+Imaginea este verificata sa fie grayscale (P2 sau P5), iar numarul de
+bin-uri (y) trebuie sa fie o putere a lui 2 si intre [2, 256].
+Intensitatile pixelilor sunt grupate in y bin-uri egale, dimensiunea unui
+bin fiind calculata ca (max_val + 1) / y.
+Pentru fiecare pixel, se determina bin-ul corespunzator si se
+incrementeaza frecventa.
+Frecventa maxima este calculata pentru a normaliza valorile.
+Frecventele sunt scalate pentru a afisa grafic proportional cu o latime maxima data de utilizator.
+
+Formule folosite
+
+Bin-ul unui pixel este determinat ca intensitate / dimensiunea_binului.
+Frecventa normalizata pentru afisare este calculata ca
+(frecventa_binului / frecventa_maxima) * latime_maxima.
+
+7. Egalizarea Histogramei (EQUALIZE)
+
+Descriere: Functia equalize redistribuie uniform intensitatile pixelilor
+pentru a imbunatati contrastul imaginilor grayscale.
+
+Se calculeaza histograma initiala pentru fiecare intensitate din intervalul
+[0, 255].
+Histograma cumulativa se obtine prin insumarea frecventelor intensitatilor
+de la 0 pana la valoarea curenta.
+Fiecare intensitate este convertita la o noua valoare folosind formula:
+(suma_cumulativa / arie) * 255.
+
+8. Salvarea Imaginilor (SAVE)
+
+Descriere: Functia save_image salveaza imaginile procesate in format ASCII sau
+binar.
+Scrierea antetului include formatul, dimensiunile si valoarea maxima.
+Matricea de pixeli este scrisa in functie de tipul fisierului (text sau binar).
+
+Particularitati Tehnice
+
+Consumarea liniilor ramase:
+Pentru a preveni erorile generate de comenzi incomplete sau input gresit,
+se foloseste:
+while (getchar() != '\n');
+
+Aceasta metoda elimina restul liniei si asigura ca programul trece la
+urmatoarea comanda.
+
+Totodata, pentru a analiza mai multe date intr-o singura linie am utilizat
+functiile sscanf. In acest context, variabila de tip char (ex. c)
+este utilizata pentru a verifica daca mai exista caractere suplimentare in 
+input sau daca nu am citit destule date de tipul corespunzator:
+
+if (sscanf(param, "%d %d %d %d %c", &x1, &y1, &x2, &y2, &c) == 4) {
+    // Validare coordonate
+}
+
+Gestionarea memoriei:
+
+Matricile vechi sunt eliberate corect inainte de a aloca altele noi, prevenind
+astfel scurgerile de memorie.
+
+Compatibilitate cu formate diverse:
+
+Programul diferentiaza imaginile ASCII si binare, adaptand metodele de citire si
+scriere pentru fiecare caz.
+
+Detalii Functia main
+
+Rol: Functia main proceseaza comenzile utilizatorului si gestioneaza fluxul
+programului.
+
+Descriere:
+
+Comanda este citita, urmata de parametrii (daca sunt necesari).
+Comenzile fara parametri (EXIT, SELECT ALL) sunt procesate direct.
+Comenzile incomplete sau gresite sunt gestionate prin afisarea unui mesaj de eroare.
+Restul inputului este consumat pentru a preveni blocajele.
+
+Dificultati: Tratarea comenzilor incomplete sau a parametrilor lipsa.
+Solutie: Verificarea fiecarui caz si gestionarea separata a comenzilor invalide.
